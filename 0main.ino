@@ -5,7 +5,7 @@
 #include "masterDefs.h"
 #include "ledFuncs.h"
 
-int mode = 0; //default mode is pixel mapped mode
+uint8_t mode = 0; //default mode is pixel mapped mode
 //MODE DEFINITIONS
 //MODE 1: Pixel Mapped (150 channels)
 //MODE 2: RGB, FX select and FX speed (5 channels)
@@ -22,15 +22,13 @@ ArducamSSD1306 display(OLED_RESET); // FOR I2C
 
 CRGB leds[NUM_LEDS]; //defines LED object
 
-const int SL = 0; //defines starting LED
-const int EL = NUM_LEDS - 1; //defines ending LED
-const int wait = (-1.0 / 25.0 * NUM_LEDS) + 7;
-
-const int startChannel = 100;
+#define SL 0 //defines starting LED
+#define EL NUM_LEDS - 1 //defines ending LED
+#define WAIT_TIME (-1.0 / 25.0 * NUM_LEDS) + 7
 
 //////////////////EFFECTS BUILDERS///////////////////
 void blackout() {
-  for (int i = SL; i <= EL; i++) {
+  for (uint8_t i = SL; i <= EL; i++) {
     leds[i] = CRGB::Black;
   }
   FastLED.show();
@@ -78,14 +76,14 @@ void runner(int r, int g, int b, int mode) { //mode1: forward //mode2: backward 
     for (int i = SL; i <= EL; i++) {
       leds[i] = CRGB(b, r, g);
       FastLED.show();
-      delay(2 * wait);
+      delay(2 * WAIT_TIME);
     }
   }
   else if (mode == 2) {
     for (int i = EL; i >= SL; i--) {
       leds[i] = CRGB(b, r, g);
       FastLED.show();
-      delay(2 * wait);
+      delay(2 * WAIT_TIME);
     }
   }
   else if (mode == 3) {
@@ -93,7 +91,7 @@ void runner(int r, int g, int b, int mode) { //mode1: forward //mode2: backward 
       leds[i] = CRGB(b, r, g);
       leds[EL - i] = CRGB(b, r, g);
       FastLED.show();
-      delay(5 * wait);
+      delay(5 * WAIT_TIME);
     }
   }
   else if (mode == 4) {
@@ -101,17 +99,17 @@ void runner(int r, int g, int b, int mode) { //mode1: forward //mode2: backward 
       leds[i] = CRGB(b, r, g);
       leds[EL - i] = CRGB(b, r, g);
       FastLED.show();
-      delay(5 * wait);
+      delay(5 * WAIT_TIME);
     }
   }
   blackout();
 }
 
 void strobe() { //change strobe to be specific
-  int r = DMXSerial.read(startChannel);
-  int g = DMXSerial.read(startChannel + 1);
-  int b = DMXSerial.read(startChannel + 2);
-  int t = 2 * DMXSerial.read(startChannel + 4);
+  int r = DMXSerial.read(address);
+  int g = DMXSerial.read(address + 1);
+  int b = DMXSerial.read(address + 2);
+  int t = 2 * DMXSerial.read(address + 4);
   //  for (int k = 0; k < 10; k++) {
   for (int i = SL; i <= EL; i++)
     leds[i] = CRGB(b, r, g);
@@ -178,23 +176,23 @@ void dj() {
 
 void FXSel(int f) { //functions used for FX selection
   if (f == 0 || f == 255)
-    solidRGB(DMXSerial.read(startChannel),
-             DMXSerial.read(startChannel + 1),
-             DMXSerial.read(startChannel + 2));
+    solidRGB(DMXSerial.read(address),
+             DMXSerial.read(address + 1),
+             DMXSerial.read(address + 2));
   else if (f > 0 && f < 50)
     strobe();
   else if (f >= 50 && f < 90)
-    runner(DMXSerial.read(startChannel),
-           DMXSerial.read(startChannel + 1),
-           DMXSerial.read(startChannel + 2),
-           ((DMXSerial.read(startChannel + 3) - 50) / 10) + 1);
+    runner(DMXSerial.read(address),
+           DMXSerial.read(address + 1),
+           DMXSerial.read(address + 2),
+           ((DMXSerial.read(address + 3) - 50) / 10) + 1);
 }
 
 void pixelMap() {
   for (int i = SL; i <= EL; i++) {
-    leds[i] = CRGB(DMXSerial.read(startChannel + 2 + (3 * i)),
-                   DMXSerial.read(startChannel + (3 * i)),
-                   DMXSerial.read(startChannel + 1 + (3 * i)));
+    leds[i] = CRGB(DMXSerial.read(address + 2 + (3 * i)),
+                   DMXSerial.read(address + (3 * i)),
+                   DMXSerial.read(address + 1 + (3 * i)));
   }
   FastLED.show();
   delay(10); //more delay needed for pixel map mode
@@ -206,9 +204,7 @@ void mainScreen(){
     display.setTextSize(1);
     display.setTextColor(WHITE);
     display.setCursor(0,0);
-    display.println("MIDI NO SUCCESS");
-    display.setCursor(0,20);
-    display.println("FUCKKKK");
+    display.println(F("SCREEN TEST"));
     display.display();
 }
 
@@ -258,8 +254,6 @@ void setup() {
   pinMode(A7, INPUT);
   blackout();
   randomSeed(analogRead(7));
-
-  
 
   display.begin();
 }
