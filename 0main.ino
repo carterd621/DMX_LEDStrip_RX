@@ -1,6 +1,5 @@
 #include <FastLED.h>
 #include <DMXSerial.h>
-#include <ArducamSSD1306.h>
 
 #include "masterDefs.h"
 #include "ledFuncs.h"
@@ -11,14 +10,6 @@ uint8_t mode = 0; //default mode is pixel mapped mode
 //MODE 2: RGB, FX select and FX speed (5 channels)
 
 int address = 1; //default address is 1 (can this be changed to not change when device powers off)
-
-//display setup
-#define OLED_RESET  16  // Pin 15 -RESET digital signal
-
-#define LOGO16_GLCD_HEIGHT 16
-#define LOGO16_GLCD_WIDTH  16
-
-ArducamSSD1306 display(OLED_RESET); // FOR I2C
 
 CRGB leds[NUM_LEDS]; //defines LED object
 
@@ -199,20 +190,15 @@ void pixelMap() {
 }
 
 //screen functions
-void mainScreen(){
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setCursor(0,0);
-    display.println(F("SCREEN TEST"));
-    display.display();
+void mainDisp(){
+
 }
 
-void errorScreen(){
+void errorDisp(){
     ;
 }
 
-void modeScreen(){
+void modeDisp(){
     ;
 }
 
@@ -254,8 +240,6 @@ void setup() {
   pinMode(A7, INPUT);
   blackout();
   randomSeed(analogRead(7));
-
-  display.begin();
 }
 
 void loop() {
@@ -264,5 +248,5 @@ void loop() {
     else if(mode==1)
         fiveChannel();
     else
-        errorScreen();
+        errorDisp();
 }
