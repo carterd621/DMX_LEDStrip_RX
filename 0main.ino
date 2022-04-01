@@ -18,12 +18,6 @@ CRGB leds[NUM_LEDS]; //defines LED object
 #define WAIT_TIME (-1.0 / 25.0 * NUM_LEDS) + 7
 
 //////////////////EFFECTS BUILDERS///////////////////
-void blackout() {
-  for (uint8_t i = SL; i <= EL; i++) {
-    leds[i] = CRGB::Black;
-  }
-  FastLED.show();
-}
 
 void fadeOut(int t, int h, int s, int v) {
   int vc = v;  //define brightness changing as the LEDs dim
@@ -93,7 +87,7 @@ void runner(int r, int g, int b, int mode) { //mode1: forward //mode2: backward 
       delay(5 * WAIT_TIME);
     }
   }
-  blackout();
+  blackout(leds);
 }
 
 void strobe() { //change strobe to be specific
@@ -153,7 +147,7 @@ void dj() {
     delay(random(0, 5) * 100);
   }
   else if (mode > 700) {
-    if (rand() % 2 == 0)blackout();
+    if (rand() % 2 == 0)blackout(leds);
     runner(random(0, 245), 255, 200, random(100, 500) / 100);
   }
 }
@@ -238,7 +232,7 @@ void setup() {
   DMXSerial.init(DMXReceiver);
 
   pinMode(A7, INPUT);
-  blackout();
+  blackout(leds);
   randomSeed(analogRead(7));
 }
 
