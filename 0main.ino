@@ -3,6 +3,7 @@
 
 #include "masterDefs.h"
 #include "ledFuncs.h"
+#include "screenFuncs.h"
 
 uint8_t mode = 0; //default mode is pixel mapped mode
 //MODE DEFINITIONS
@@ -17,140 +18,7 @@ CRGB leds[NUM_LEDS]; //defines LED object
 #define EL NUM_LEDS - 1 //defines ending LED
 #define WAIT_TIME (-1.0 / 25.0 * NUM_LEDS) + 7
 
-//////////////////EFFECTS BUILDERS///////////////////
-
-void fadeOut(int t, int h, int s, int v) {
-  int vc = v;  //define brightness changing as the LEDs dim
-  while (vc > 0) {
-    vc--;
-    for (int j = SL; j <= EL; j++)
-      leds[j] = CHSV(h, s, vc);
-    FastLED.show();
-    delay(double(t / v));
-  }
-}
-
-void fadeIn(int t, int h, int s, int v) { //fades to the RGB level across all inciated LEDs
-  int vc = 0;
-  while (vc < v) {
-    vc++;
-    for (int i = SL; i <= EL; i++)
-      leds[i] = CHSV(h, s, vc);
-    FastLED.show();
-    delay(double(t / v));
-  }
-}
-
-void fadeColor(double t, double h0, double h, int sat, int bright) { //fades out from RGB across indicated LEDs
-  double hstep = (h - h0) / (t / 10);
-  for (int j = SL; j <= EL; j++) {
-    leds[j] = CHSV(h0, sat, bright);
-  }
-  FastLED.show();
-  for (int i = 0; i < t; i += 10) {
-    h0 = h0 + hstep;
-    for (int k = SL; k < EL; k++)
-      leds[k] = CHSV(h0, sat, bright);
-    FastLED.show();
-    delay(10);
-  }
-}
-
-void runner(int r, int g, int b, int mode) { //mode1: forward //mode2: backward //mode3: mirror out //mode4: mirror in
-  if (mode == 1) {
-    for (int i = SL; i <= EL; i++) {
-      leds[i] = CRGB(b, r, g);
-      FastLED.show();
-      delay(2 * WAIT_TIME);
-    }
-  }
-  else if (mode == 2) {
-    for (int i = EL; i >= SL; i--) {
-      leds[i] = CRGB(b, r, g);
-      FastLED.show();
-      delay(2 * WAIT_TIME);
-    }
-  }
-  else if (mode == 3) {
-    for (int i = (EL - SL) / 2; i >= SL; i--) {
-      leds[i] = CRGB(b, r, g);
-      leds[EL - i] = CRGB(b, r, g);
-      FastLED.show();
-      delay(5 * WAIT_TIME);
-    }
-  }
-  else if (mode == 4) {
-    for (int i = SL; i <= ((EL - SL) / 2 + 1); i++) {
-      leds[i] = CRGB(b, r, g);
-      leds[EL - i] = CRGB(b, r, g);
-      FastLED.show();
-      delay(5 * WAIT_TIME);
-    }
-  }
-  blackout(leds);
-}
-
-void strobe() { //change strobe to be specific
-  int r = DMXSerial.read(address);
-  int g = DMXSerial.read(address + 1);
-  int b = DMXSerial.read(address + 2);
-  int t = 2 * DMXSerial.read(address + 4);
-  //  for (int k = 0; k < 10; k++) {
-  for (int i = SL; i <= EL; i++)
-    leds[i] = CRGB(b, r, g);
-  FastLED.show();
-  delay(6);
-  for (int i = SL; i < EL; i++)
-    leds[i] = CRGB(0, 0, 0);
-  FastLED.show();
-  delay(t);
-  //  }
-}
-
-void blnk(int t) {
-  leds[0] = CRGB(0, 100, 0);
-  FastLED.show();
-  delay(t);
-  leds[0] = CRGB(0, 0, 0);
-  FastLED.show();
-  delay(t);
-}
-
-//////////////////EFFECTS///////////////////
-void solidRGB(int r, int g, int b) {
-  for (int i = SL; i <= EL; i++) {
-    leds[i] = CRGB(b, r, g); //BRG ordering
-  }
-  FastLED.show();
-}
-
-void solidHSV(int h, int s, int v) {
-  for (int i = SL; i <= EL; i++) {
-    leds[i] = CHSV(h, s, v);
-  }
-  FastLED.show();
-}
-
-void dj() {
-  int mode = random(0, 1000);
-  if (mode <= 150)
-    strobe();
-  else if ((mode <= 400) && (mode > 150)) {
-    int color1 = random(0, 13) * 10;
-    int color2 = random(14, 26) * 10;
-    int tFade = random(300, 1500);
-    fadeColor(tFade, color1, color2, 255, 255);
-  }
-  else if ((mode <= 700) && (mode > 400)) {
-    int color = random(0, 26) * 10;
-    solidHSV(color, 0, 150);
-    delay(random(0, 5) * 100);
-  }
-  else if (mode > 700) {
-    if (rand() % 2 == 0)blackout(leds);
-    runner(random(0, 245), 255, 200, random(100, 500) / 100);
-  }
-}
+bool pcintg = true;
 
 // MASTER FX LIST for 5 channel mode
 // DMX VALUES for CHANNEL 4 when in 5 Channel Mode
@@ -161,13 +29,17 @@ void dj() {
 
 void FXSel(int f) { //functions used for FX selection
   if (f == 0 || f == 255)
-    solidRGB(DMXSerial.read(address),
+    solidRGB(leds, DMXSerial.read(address),
              DMXSerial.read(address + 1),
              DMXSerial.read(address + 2));
   else if (f > 0 && f < 50)
-    strobe();
+    strobe(leds,
+      DMXSerial.read(address),
+      DMXSerial.read(address + 1),
+      DMXSerial.read(address + 2),
+      2 * DMXSerial.read(address + 4));
   else if (f >= 50 && f < 90)
-    runner(DMXSerial.read(address),
+    runner(leds, DMXSerial.read(address),
            DMXSerial.read(address + 1),
            DMXSerial.read(address + 2),
            ((DMXSerial.read(address + 3) - 50) / 10) + 1);
@@ -185,15 +57,15 @@ void pixelMap() {
 
 //screen functions
 void mainDisp(){
-
+  ;
 }
 
 void errorDisp(){
-    ;
+  ;
 }
 
 void modeDisp(){
-    ;
+  ;
 }
 
 //button functions to be called by interrupts
@@ -225,6 +97,25 @@ void pixMap(){ //LED output based on DMX channel
 
 void fiveChannel(){
     ;
+}
+
+//Interrupts
+ISR(INT0_vect){ //pin 2
+  addressUp();
+}
+
+ISR(INT1_vect){ //pin 3
+  modeSelect();
+}
+
+ISR(PCINT0_vect){ //pin 8
+  if(pcintg){
+    addressDn();
+    pcintg=false;
+  }
+  else
+    pcintg=true;
+  //need true and false statements to only run this based on one change instead of two changes (button push and release)
 }
 
 void setup() {
