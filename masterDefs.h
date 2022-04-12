@@ -4,7 +4,10 @@
 #define WAIT_TIME (-1.0 / 25.0 * NUM_LEDS) + 7
 
 #define DATA_PIN 5
+#define DBLED_PIN 6
 #define ADRUP_PIN 2
 #define ADRDN_PIN 8
 #define MODE_PIN 3
 #define RAND_PIN A7
+
+#define AD_MEM 0x00 //address in EEPROM for use of address
