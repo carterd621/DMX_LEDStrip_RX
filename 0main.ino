@@ -15,7 +15,7 @@ uint8_t mode = 0; //default mode is pixel mapped mode
 //MODE 1: Pixel Mapped (150 channels)
 //MODE 2: RGB, FX select and FX speed (5 channels)
 
-int address = 500; //default address is 1 (can this be changed to not change when device powers off)
+int address = 1; //default address is 1 (can this be changed to not change when device powers off)
 
 CRGB leds[NUM_LEDS]; //defines LED object
 
@@ -25,7 +25,7 @@ CRGB leds[NUM_LEDS]; //defines LED object
 
 bool pcintg = true;
 
-bool dbstate = 0;
+//bool dbstate = 0;
 
 HT16K33 display; //define display setup
 
@@ -87,7 +87,13 @@ void startDisp(){
   display.printChar('D',0);
   display.printChar('M',1);
   display.printChar('X',2);
-  display.printChar('!',3);
+  display.updateDisplay();
+}
+
+void rxDisp(){
+  display.clear();
+  display.printChar('R',0);
+  display.printChar('X',1);
   display.updateDisplay();
 }
 
@@ -125,30 +131,30 @@ void fiveChannel(){
 }
 
 void lamp(){ //a debugging function that turns lamp on and off based on certain input
-  if(dbstate){
-    digitalWrite(DBLED_PIN, LOW);
-    dbstate=0;
-  }
-  else{
-    digitalWrite(DBLED_PIN, HIGH);
-    dbstate=1;
-  }
-
+  digitalWrite(DBLED_PIN, HIGH);
+  delay(500);
+  digitalWrite(DBLED_PIN, LOW);
+  delay(500);
 }
 
 //Interrupts
 ISR(INT0_vect){ //pin D2 (INT0) //works as of 4/7
-  lamp();
   addressUp();
+  //lamp();
+  //lamp();
 }
 
 ISR(INT1_vect){ //pin D3 (INT1) //works as of 4/7
   modeSelect();
+  //lamp();
+  //lamp();
 }
 
 ISR(PCINT0_vect){ //pin D8 (PCINT0/PB0) //works as of 4/7
   if(pcintg){
     addressDn();
+    lamp();
+    lamp();
     pcintg=false;
   }
   else
@@ -157,12 +163,24 @@ ISR(PCINT0_vect){ //pin D8 (PCINT0/PB0) //works as of 4/7
 }
 
 void setup() {
+  //setup interrupts
+  //EIMSK |= (1<<INT0);
+  EICRA |= (1<<ISC01); //set to trigger on falling voltage
+
+  EIMSK |= (1<<INT1); //turn on INT1
+  EICRA |= (1<<ISC11); //set to trigger on falling voltage
+
+  PCICR |= (1<<PCIE0); //turn on PCINT0
+  PCMSK0 |= (1<<PCINT0); //mask to use pin PB0 which is D8
+
+  sei(); //enable global interrupts
+
   FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);  // BRG ordering is typical
   DMXSerial.init(DMXReceiver);
   
-  pinMode(ADRUP_PIN, INPUT_PULLUP);
-  pinMode(ADRDN_PIN, INPUT_PULLUP);
-  pinMode(MODE_PIN, INPUT_PULLUP);
+  pinMode(ADRUP_PIN, INPUT);
+  pinMode(ADRDN_PIN, INPUT);
+  pinMode(MODE_PIN, INPUT);
   pinMode(A7, INPUT);
   pinMode(DBLED_PIN, OUTPUT);
   blackout(leds);
@@ -172,23 +190,16 @@ void setup() {
   //check if displays will acknowledge
   display.begin(0x70);
 
-  //setup interrupts
-  EIMSK |= (1<<INT0); //turn on INT0
-  EICRA |= (1<<ISC01); //set to trigger on falling voltage
-
-  EIMSK |= (1<<INT1); //turn on INT0
-  EICRA |= (1<<ISC11); //set to trigger on falling voltage
-
-  PCICR |= (1<<PCIE0); //turn on PCINT0
-  PCMSK0 |= (1<<PCINT0); //mask to use pin PB0 which is D8
-
-  sei(); //enable global interrupts
-
+  //init DB LED
   digitalWrite(DBLED_PIN, LOW);
+
+  startDisp();
+  delay(1000);
+  mainDisp();
 }
 
 void loop() {
-  startDisp();
+  solidRGB(leds, DMXSerial.read(address),0, 0);
 /*
     if (mode==0)
         pixMap();
