@@ -35,7 +35,7 @@ HT16K33 display; //define display setup
 // 0 ----- Solid Color
 // 1<49 -- Strobe (speed fast to slow)
 // 50<59 front to back 60<69 back to front 70<79 mirror out 80<89 mirror in (runner effects)
-/*
+
 void FXSel(int f) { //functions used for FX selection
   if (f == 0 || f == 255)
     solidRGB(leds, DMXSerial.read(address),
@@ -53,7 +53,7 @@ void FXSel(int f) { //functions used for FX selection
            DMXSerial.read(address + 2),
            ((DMXSerial.read(address + 3) - 50) / 10) + 1);
 }
-
+/*
 void pixelMap() {
   for (int i = SL; i <= EL; i++) {
     leds[i] = CRGB(DMXSerial.read(address + 2 + (3 * i)),
@@ -94,6 +94,15 @@ void rxDisp(){
   display.clear();
   display.printChar('R',0);
   display.printChar('X',1);
+  display.updateDisplay();
+}
+
+void DMXRXDisp(int value){
+  display.clear();
+  display.printChar('V',0);
+  display.printChar(numMap[value/100],1);
+  display.printChar(numMap[(value/10)%10],2);
+  display.printChar(numMap[value%10],3);
   display.updateDisplay();
 }
 
@@ -199,7 +208,10 @@ void setup() {
 }
 
 void loop() {
-  solidRGB(leds, DMXSerial.read(address),0, 0);
+  FXSel(DMXSerial.read(address + 3));
+  //DMXRXDisp(DMXSerial.read(address));
+  //solidHSV(leds, DMXSerial.read(address), 255, 255);
+  delay(30);
 /*
     if (mode==0)
         pixMap();
