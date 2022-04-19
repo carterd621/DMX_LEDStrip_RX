@@ -8,12 +8,12 @@
 #include "ledFuncs.h"
 #include "screenFuncs.h"
 
-int mode = 0; //default mode is pixel mapped mode
+int mode = 1; //default mode is pixel mapped mode
 //MODE DEFINITIONS
 //MODE 1: Pixel Mapped (150 channels)
 //MODE 2: RGB, FX select and FX speed (5 channels)
 
-int address = 1; //default address is 1 (can this be changed to not change when device powers off)
+int address = 500; //default address is 1 (can this be changed to not change when device powers off)
 
 CRGB leds[NUM_LEDS]; //defines LED object
 
@@ -34,22 +34,45 @@ void modeSelect(){
       mode = 0;
   else
       mode++;
+  modeDisp(display, mode);
+  delay(1000);
+  mainDisp(display, address);
 }
 
 void addressUp(){
-  if(address==512)
+  bool state = true;
+  do
+  {
+    if(address==512)
       address = 1;
-  else
+    else
       address++;
-  mainDisp(display, address);
+    if(state){
+      delay(500);
+      state = false;
+    }
+    else
+      delay(50);
+    mainDisp(display,address);
+  } while (digitalRead(ADRUP_PIN)==LOW);
 }
 
 void addressDn(){
-  if(address==1)
+  bool state = true;
+  do
+  {
+    if(address==1)
       address = 512;
-  else
+    else
       address--;
-  mainDisp(display, address);
+    if(state){
+      delay(500);
+      state = false;
+    }
+    else
+      delay(50);
+    mainDisp(display,address);
+  } while (digitalRead(ADRDN_PIN)==LOW);
 }
 
 //functions for the LED output based on modes
@@ -93,44 +116,15 @@ void lamp(int reps){
 }
 
 //Interrupts
-ISR(INT0_vect){ //pin D2 (INT0) //works as of 4/7
-  addressUp();
-}
 
-ISR(INT1_vect){ //pin D3 (INT1) //works as of 4/7
-  modeSelect();
-  lamp(3);
-}
-
-ISR(PCINT0_vect){ //pin D8 (PCINT0/PB0) //works as of 4/7
-  if(pcintg){
-    addressDn();
-    pcintg=false;
-  }
-  else
-    pcintg=true;
-  //need true and false statements to only run this based on one change instead of two changes (button push and release)
-}
 
 void setup() {
-  //setup interrupts
-  //EIMSK |= (1<<INT0);
-/*  EICRA |= (1<<ISC01); //set to trigger on falling voltage
-
-  EIMSK |= (1<<INT1); //turn on INT1
-  EICRA |= (1<<ISC11); //set to trigger on falling voltage
-
-  PCICR |= (1<<PCIE0); //turn on PCINT0
-  PCMSK0 |= (1<<PCINT0); //mask to use pin PB0 which is D8
-
-  sei(); //enable global interrupts
-*/
   FastLED.addLeds<WS2811, DATA_PIN, BRG>(leds, NUM_LEDS);  // BRG ordering is typical
   DMXSerial.init(DMXReceiver);
   
-  pinMode(ADRUP_PIN, INPUT);
-  pinMode(ADRDN_PIN, INPUT);
-  pinMode(MODE_PIN, INPUT);
+  pinMode(ADRUP_PIN, INPUT_PULLUP);
+  pinMode(ADRDN_PIN, INPUT_PULLUP);
+  pinMode(MODE_PIN, INPUT_PULLUP);
   pinMode(A7, INPUT);
   pinMode(DBLED_PIN, OUTPUT);
   blackout(leds);
@@ -141,14 +135,17 @@ void setup() {
   display.begin(0x70);
 
   //init DB LED
-  digitalWrite(DBLED_PIN, LOW);
+  //digitalWrite(DBLED_PIN, LOW);
+
+  Serial.begin(112500);
 
   startDisp(display);
   delay(1000);
-  mainDisp(display, address);
-  delay(1000);
   modeDisp(display, mode);
   delay(1000);
+  mainDisp(display, address);
+  delay(1000);
+  
 
 }
 
@@ -156,13 +153,17 @@ void loop() {
   // DMXRXDisp(display, DMXSerial.read(address));
   // solidHSV(leds, DMXSerial.read(address), 255, 255);
   // delay(30);
-  pixMap();
-  modeDisp(display, mode);
-  /*if (mode==0)
-    pixMap();
-  else if(mode==1)
+  if (mode==0)
     fiveChannel();
+  else if(mode==1)
+    pixMap();
   else
-    errorDisp(display);*/
+    errorDisp(display);
   delay(30);
+  if(digitalRead(ADRUP_PIN)==LOW)
+    addressUp();
+  else if(digitalRead(MODE_PIN)==LOW)
+    modeSelect();
+  else if(digitalRead(ADRDN_PIN)==LOW)
+    addressDn();
 }

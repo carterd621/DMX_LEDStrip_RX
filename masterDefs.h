@@ -5,9 +5,9 @@
 
 #define DATA_PIN 5
 #define DBLED_PIN 13
-#define ADRUP_PIN 2
+#define ADRUP_PIN 10
 #define ADRDN_PIN 8
-#define MODE_PIN 3
+#define MODE_PIN 9
 #define RAND_PIN A3
 
 #define AD_MEM 0x00 //address in EEPROM for use of address
