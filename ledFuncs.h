@@ -9,7 +9,7 @@ void blackout(CRGB leds[NUM_LEDS]) {
 
 void solidRGB(CRGB leds[NUM_LEDS], int r, int g, int b) {
   for (int i = SL; i <= EL; i++) {
-    leds[i] = CRGB(b, r, g); //BRG ordering
+    leds[i] = CRGB(r, g, b);
   }
   FastLED.show();
 }

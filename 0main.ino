@@ -8,12 +8,12 @@
 #include "ledFuncs.h"
 #include "screenFuncs.h"
 
-int mode = 1; //default mode is pixel mapped mode
+int mode = 0; //default mode is pixel mapped mode
 //MODE DEFINITIONS
 //MODE 1: Pixel Mapped (150 channels)
 //MODE 2: RGB, FX select and FX speed (5 channels)
 
-int address = 500; //default address is 1 (can this be changed to not change when device powers off)
+int address = 1; //default address is 1 (can this be changed to not change when device powers off)
 
 CRGB leds[NUM_LEDS]; //defines LED object
 
@@ -30,7 +30,7 @@ HT16K33 display; //define display setup
 
 //button functions to be called by interrupts
 void modeSelect(){
-  if(mode==1)
+  if(mode==2)
       mode = 0;
   else
       mode++;
@@ -76,9 +76,19 @@ void addressDn(){
 }
 
 //functions for the LED output based on modes
-void pixMap() {
+void pixRGB() {
   for (int i = SL; i <= EL; i++) {
     leds[i] = CRGB(DMXSerial.read(address + (3 * i)), //RED
+                  DMXSerial.read(address + 1 + (3 * i)), //GREEN
+                  DMXSerial.read(address + 2 + (3 * i))); //BLUE
+  }
+  FastLED.show();
+  delay(10); //more delay needed for pixel map mode
+}
+
+void pixHSV() {
+  for (int i = SL; i <= EL; i++) {
+    leds[i] = CHSV(DMXSerial.read(address + (3 * i)), //RED
                   DMXSerial.read(address + 1 + (3 * i)), //GREEN
                   DMXSerial.read(address + 2 + (3 * i))); //BLUE
   }
@@ -115,10 +125,7 @@ void lamp(int reps){
   }
 }
 
-//Interrupts
-
-
-void setup() {
+void initialize(){
   FastLED.addLeds<WS2811, DATA_PIN, BRG>(leds, NUM_LEDS);  // BRG ordering is typical
   DMXSerial.init(DMXReceiver);
   
@@ -145,8 +152,10 @@ void setup() {
   delay(1000);
   mainDisp(display, address);
   delay(1000);
-  
+}
 
+void setup() {
+  initialize();
 }
 
 void loop() {
@@ -156,7 +165,9 @@ void loop() {
   if (mode==0)
     fiveChannel();
   else if(mode==1)
-    pixMap();
+    pixRGB();
+  else if(mode==2)
+    pixHSV();
   else
     errorDisp(display);
   delay(30);
